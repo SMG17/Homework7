@@ -62,18 +62,21 @@ data
 #4-d)
 # Compute the log-fold change of every gene (i.e., log2(BY_expression/RM_expression)):
 log_change <- data[, .(gene_name, log_change = log2(BY_expression/RM_expression))] 
-head(log_change) # We get a lot of NaN (i.e., "0" divided by "0") values because a lot of the RM expression values are "0".
-# BUT when BY_expression != 0 and RM_expression == 0, then I get "Inf". Does this mean I should only remove rows where both values are "0"?
+head(log_change) # We get a lot of NaN (i.e., values divided by "0") because a lot of the RM expression values are "0".
 
 #4-e)
 # Filter out the "bad" rows, and redo part d:
-log_change_filtered <- data[with(data, RM_expression > 0), .(gene_name, log_change = log2(BY_expression/RM_expression))] 
+log_change_filtered <- data[with(data, RM_expression > 0 & BY_expression > 0), .(gene_name, log_change = log2(BY_expression/RM_expression))] 
 head(log_change_filtered)
+# If I wanted to update data table by removing RM_expression and BM_expression rows with value = 0:
+data_filtered <- data[with(data, RM_expression > 0 & BY_expression > 0), .(gene_name, gene_length, BY_expression, RM_expression)]
 
 #4-f)
 # Add pseudo-counts to every gene:
 data_pseudo <- data[, .(gene_name, gene_length, BY_pseudo = BY_expression + 1,RM_pseudo = RM_expression + 1)] 
 head(data_pseudo)
+
+#data_pseudo_2 <- data[, BY_pseudo := BY_expression + 1] # := adds this information as a new column to the data.table "data"
 
 #4-g)
 # Re-compute the log-fold change using pseudo-counted data:
@@ -82,7 +85,7 @@ head(log_change_filtered)
 
 #4-h)
 # Compute FPKM values for every gene:
-FPKM <- data[, .(gene_name, FPKM_BY = BY_expression/(gene_length*length(BY_expression)*(10^9)), FPKM_RM = RM_expression/(gene_length*length(RM_expression)*(10^9)))]
+FPKM <- data_filtered[, .(gene_name, FPKM_BY = BY_expression/(gene_length*sum(BY_expression)*(10^9)), FPKM_RM = RM_expression/(gene_length*sum(RM_expression)*(10^9)))]
 head(FPKM)
 
 #4-i)
